@@ -1,1 +1,3 @@
 # Elements--fini-2d-
+
+Dans ce notebook, j'ai essayé d'implémenter un ensemble de problèmes (équations) avec la méthode des éléments finis, et j'ai réussi à trouver un ensemble de résultats et d'interprétations. Dans ce notebook, il y a une explication de chaque étape et chaque méthode. Il y a aussi le fichier .py qui contient un ensemble de fonctions pour lire la géométrie qu'on a lancée sur Gmsh, ainsi que de nombreux résultats en .vtk et une vidéo d'animation pour l'équation de la chaleur avec le temps.

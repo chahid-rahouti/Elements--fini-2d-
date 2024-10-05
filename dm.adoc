@@ -1,0 +1,251 @@
+= Assemblage de la matrice d'élément fini
+:feelpp: Feel++
+:stem: latexmath
+
+Ce TP est à effectuer en python, l'énoncé est https://feelpp.github.io/csmi-edp-assemblage/[ici].
+
+== Lecture d'un fichier Gmsh 
+
+Le fichier GmshRead.py contient une classe mesh dont les objets sont les données associées à un maillage triangulaire stem:[\mathrm{P} 1] en stem:[2 \mathrm{D}] contruit à partir d'un fichier gmsh (v4). 
+
+Un élément de la classe maillage contient:
+
+* `Nnodes`: nombre de noeuds du maillage 
+* `Nodes`: tableau de taille (Nnodes, 2 ) contenant les coordonnées des noeuds du maillage 
+* `label`: tableau de taille Nnodes contenant des informations sur la location du noeud (noeud du bords / noeuds interne) 
+* `Nel`: nombre d'éléments du mailage 
+* `connect` : tableau de connectivité de taille `(Nel, 3 )` 
+
+Pour les remplir, il parcoure un fichier .msh ligne à ligne (`line = f.readline()`) et récupère les données en parsant chaque ligne ( `line.split()` ).
+
+Q1:: Remplir le tableau `connect`.
+
+[source,python]
+----
+----
+
+Q2:: Ajouter un tableau diam de taille `Nel` qui contient le diamètre de chacun des éléments, ainsi que le paramètre h du maillage.
+
+[source,python]
+----
+----
+
+Q3:: Ajouter un tableau area de taille `Nel` qui contient l'aire de chacun des éléments. 
+
+[source,python]
+----
+----
+
+TIP: l'aire d'un parallélogramme est égale au produit vectoriel/ déterminant des deux vecteurs qui l'engendrent
+
+
+Q4:: Tester votre code avec le maillage d'un rectangle triangulé régulièrement. 
+
+[source,python]
+----
+----
+
+Q5:: Vérifier que l'aire du rectangle est bien la somme des aires des triangles. 
+
+[source,python]
+----
+----
+
+Q6:: Vérifier la même chose sur une géométrie différente du rectangle.
+
+[source,python]
+----
+----
+
+
+== Base de l'élément fini P1. 
+
+Considérons le triangle de sommets stem:[a_{1}=(0,0), a_{2}=(1,0)] et stem:[a_{3}=(0,1),] comme éléments de références. 
+La base d'élément fini associé à chacun de ces points est donnée par:
+
+[stem]
+++++
+\psi_{1}(x, y)=1-(x+y), \quad \psi_{2}(x, y)=x, \quad \psi_{3}(x, y)=y
+++++
+
+Q1:: Créer une fonction `coord(1d)` qui prend en entrée un tableau de taille 3 contenant les coordonnées barycentriques stem:[\left(\lambda_{1}, \lambda_{2}, \lambda_{3}\right)] d'un point et renvoie le tableau de taille 2 contenant les coordonnées de ce point:
++
+[stem]
+++++
+(x, y)=\lambda_{1} a_{1}+\lambda_{2} a_{2}+\lambda_{3} a_{3}
+++++
+
+[source,python]
+----
+----
+
+Q2:: Nous souhaitons créer une fonction `base_psiref()`` qui permettra d'effectuer les quadratures
+sur l'élément de référence. Cette fonction doit renvoyer les quatre tableaux suivants:
++
+* `pts`: tableau de taille `(7, 3)` contenant les coordonnées barycentriques des points de quadrature,
+* `wght`: tableau de taille `7` contenant les poids de quadrature associés, 
+* `psi`: tableau de taille `(3,7)`` contenant la valeur des 3 fonctions de bases aux 7 points de quadratures. 
+* `derpsi`: tableau de taille `(3,7,2)` contenant la valeur des gradients des 3 fonctions de bases aux 7 points de quadratures.
+
+[source,python]
+----
+----
+
+== Assemblage de la matrice.
+
+Q1:: Créer une `class poisson` qui contient un prend à la contruction en entrée un maillage `Mh` et une fonction, `f`, correspondant au second membre de l'équation. Un élément de la classe contiendra de plus `Ndof`, le nombre de degrés de liberté (correspondant au nombre de noeuds du maillage), une matrice de taille `(Ndof,Ndof)`, stockée intialement au format link:https://scipy-lectures.org/advanced/scipy_sparse/dok_matrix.html[dok], un tableau `rhs` de taille `Ndof`, contenant le second membre du système linéaire et enfin un tableau u de taille `Ndof` contenant la solution approchée.
+
+[source,python]
+----
+----
+
+Q2:: Ajouter une fonction `assemble_matrix(self)` qui assemble la matrice. On pourra compléter le code suivant :
+
+[source,python]
+----
+    pts, wght, psi, derpsi = basis_psiref()
+    for nel in range( Mh.Nel):
+        A = ... # noeuds du triangle
+        B = ....
+        C = ....
+        comT = ... #det(T_K) * (nabla (T_K))^{-1} = com(T_{K})^{-1}
+        detT = .... #det(T_K)
+        for i, wgh in enumerate(wght):
+            for ni in range( 3):
+                inode = Mh.connect[nel, ni]
+                for nj in range(3):
+                    jnode = Mh.connect[nel, nj]
+                    dpsi_i = ...
+                    dpsi_j = ...
+                    self.M[inode, jnode] += ....
+                    self.M = self.M.tocsc()
+----
+
+Q3:: La matrice précédente est la matrice associée au Laplacien avec condition de Neumann. Pour inclure des conditions de Dirichlet, utiliser la méthode d'élimination
+
+[source,python]
+----
+----
+
+
+Q4:: Créer sur le même modèle une fonction `rhs( self)` qui assemble le second membre. Pour inclure des conditions de Dirichlet, il faut aussi que `rhs[inode] = 0` dès que `inode` correspond à un noeud du bord.
+
+[source,python]
+----
+----
+
+
+
+Q5:: Créer une fonction `solve( self)` qui calcule la solution approchée.
+
+[source,python]
+----
+----
+
+
+
+Q6:: Ajouter une fonction `plot_sol( self)` qui permet d’afficher la solution approchée et ajouter un argument `plot` dans la fonction `solve`.
+
+[source,python]
+----
+    x = Mh.Nodes[:, 0]
+    y = Mh.Nodes[:, 1]
+    fig = plt.figure()
+    ax = fig.gca(projection=’3d’)
+    surf = ax.plot_trisurf(x, y, self.ufull, linewidth=0.2,
+    antialiased=True, cmap=plt.cm.CMRmap)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+----
+
+Q7:: Tester votre fonction avec un maillage du disque et la fonction `f = 1`. Calculer la solution exacte et son gradient.
+
+[source,python]
+----
+----
+
+
+
+Q8:: Ajouter une fonction `compute( self)` qui calcule l'erreur en norme stem:[L^2]
+et en norme stem:[H^1] entre la solution approchée et la solution exacte (projetée sur l'espace d'élément finis P1). Vérifier l'ordre de convergence numérique.
+
+[source,python]
+----
+----
+
+
+
+Q9:: Facultatif: Implémenter le support de condition de Neumann non homogène
+
+[source,python]
+----
+----
+
+Q10:: Tester votre code avec conditions de Dirichlet et Neumann homogènes  sur une géométrie non triviale de votre choix avec une solution manufacturée dans l'espace et une non-polynomiale en faisant une étude de convergence.
+
+* tester une solution constante (l'erreur doit être nulle)
+
+[source,python]
+----
+----
+
+* tester une solution linéaire (l'erreur doit être nulle)
+
+[source,python]
+----
+----
+
+* tester une solution quadratique (l'erreur n'est plus nulle)
+
+[source,python]
+----
+----
+
+* tester une solution non polynomiale (l'erreur n'est plus nulle)
+
+[source,python]
+----
+----
+
+
+
+
+//== Comparaison avec {feelpp}
+
+//11. Implémenter les cas précédents(Q10) avec {feelpp} en python. Tester et vérifier les résultats des cas précédents, comparer le comportement des normes stem:[L^2] et stem:[H^1].
++
+//12. Implémenter les cas stem:[P^2] et stem:[P^3], Tester et vérifier les résultats des cas précédents, qu'observe t'on sur l'ordre de convergence en normes stem:[L^2] et stem:[H^1]. Est-ce le résultat attendu ? A quoi faut il faire attention ?
+
+== Implementation le cas parabolique avec {feelpp}
+
+Soit stem:[\Omega=[0,1\]^2], rajouter le terme de dérivée en temps stem:[\frac{\partial u}{\partial t}], implémenter un schéma Euler implicite en temps,  linéaire par morceaux en espace, des conditions de Dirichlet et un second membre donnés par les fonctions ci-dessous de telle facon que ces fonctions soient solutions du problème et tester l'erreur stem:[L^2] au dernier pas de temps avec les fonctions
+
+Q1:: stem:[t+x] sur l'intervalle de temps stem:[[0,1\]] avec stem:[\Delta t=0.1], Qu'observez vous concernant l'erreur ?
+
+[source,python]
+----
+----
+
+
+Q2:: stem:[\sin(\pi x)\cos(\pi y)exp(-t)] sur l'intervalle de temps stem:[[0,1\]] avec stem:[\Delta t=0.1]
+
+[source,python]
+----
+----
+
+
+Q3:: stem:[\sin(\pi x)\cos(\pi y)exp(-t)] sur l'intervalle de temps stem:[[0,1\]] avec stem:[\Delta t=0.05]
+
+[source,python]
+----
+----
+
+
+Q4:: Comparer l'erreur sur les 2 derniers cas.
+
+[source,python]
+----
+----
+
+
+
+
